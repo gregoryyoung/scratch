@@ -63,13 +63,18 @@ add_data(struct ParserState *state, struct Buffer *data) {
 
 struct Buffer *
 read_next (struct ParserState *state) {
-    int32_t msg_length = 0;
-    if(state->parser_read - state->buffer_start > 4) {
-        memcpy (&msg_length, state->parser_read, sizeof(msg_length));
-
-    }
+    assert (state);
+    int32_t length = 0;
+    if(state->buffer_write - state->parser_read < 4) return NULL;
+    memcpy (&length, state->parser_read, sizeof(length));
     //read length prefix
-    return NULL;
+    length = ntohl(length);
+    if(state->buffer_write - state->parser_read < length + 4) return NULL;
+    struct Buffer *ret = malloc(sizeof(struct Buffer));
+    ret->length = length;
+    ret->location = state->parser_read + 4;
+    state->parser_read = state->parser_read + length + 4;
+    return ret;
 }
 
 static void
@@ -101,12 +106,40 @@ test_add_data (void) {
 static void
 test_read (void) {
     struct ParserState *state = create_parser_state(4096);
-    char data[10] = {0,0,0,0x0A,1,2,3,4,5,6};
+    char data[24] = {0,0,0,0x0A,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
     struct Buffer b;
-    b.length = 3;
+    //too short
+    b.length = 6;
     b.location = (char *) &data;
+    char *old_parser_read = state->parser_read;
     assert (add_data (state, &b) == 0);
-    //read_next
+    assert (read_next (state) == NULL);
+    assert (old_parser_read == state->parser_read);
+    destroy_parser_state (&state);
+
+    //perfect fit
+    state = create_parser_state (4096);
+    b.length = 14;
+    assert (add_data (state, &b) == 0);
+    struct  Buffer *ret = read_next (state);
+    assert (ret);
+    assert (ret->location == state->buffer_start + 4);
+    assert (ret->length == 10);
+    assert (old_parser_read + 14 == state->parser_read);
+    destroy_parser_state (&state);
+    free (ret);
+
+    //more than enough
+    state = create_parser_state (4096);
+    b.length = 20;
+    assert (add_data (state, &b) == 0);
+    ret = read_next (state);
+    assert (ret);
+    assert (ret->location == state->buffer_start + 4);
+    assert (ret->length == 10);
+    assert (old_parser_read + 14 == state->parser_read);
+    destroy_parser_state (&state);
+    free (ret);
 }
 
 int
