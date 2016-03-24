@@ -49,14 +49,8 @@ int main(int argc, char *argv[])
     pfds[1].events = POLLERR | POLLHUP;
     while(3) {
         poll(pfds, 2, -1);
-        printf("poll woke up\n");
-        printf("0 %d\n", pfds[0].revents);
-        printf("0 %d\n", pfds[1].revents);
         if (pfds[0].revents & POLLIN) {
-            printf("in POLLIN");
             char buf[1024];
-            printf("read set");
-            fflush(stdout);
             int32_t i = read(sockfd, buf, 1024);
             printf("read %d bytes\n", i);
 
