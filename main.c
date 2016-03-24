@@ -15,7 +15,7 @@
 
 
 struct ParserState {
-    int32_t current_location;
+    char *parser_read;
     char *buffer_end;
     char *buffer_start;
     char *buffer_write;
@@ -31,7 +31,7 @@ create_parser_state (int buffer_size) {
     struct ParserState *ret = malloc ( sizeof ( struct ParserState));
     ret ->buffer_start = malloc (buffer_size);
     ret->buffer_end = ret->buffer_start + buffer_size;
-    ret->current_location = 0;
+    ret->parser_read = ret->buffer_start;
     ret->buffer_write = ret->buffer_start;
     return ret;
 }
@@ -62,21 +62,24 @@ add_data(struct ParserState *state, struct Buffer *data) {
 }
 
 struct Buffer *
-read_next (struct ParserState *state, char *data, int length) {
-    if(state->buffer_write - state->buffer_start > 4) {
+read_next (struct ParserState *state) {
+    int32_t msg_length = 0;
+    if(state->parser_read - state->buffer_start > 4) {
+        memcpy (&msg_length, state->parser_read, sizeof(msg_length));
 
     }
     //read length prefix
-    return 0;
+    return NULL;
 }
 
 static void
 test_add_data (void) {
     char data[16] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p'};
     struct ParserState *state = create_parser_state(32);
-    assert(state->buffer_end);
-    assert(state->buffer_start);
-    assert(state->buffer_start == state->buffer_write);
+    assert (state->buffer_end);
+    assert (state->buffer_start);
+    assert (state->parser_read == state->buffer_start);
+    assert (state->buffer_start == state->buffer_write);
     //simple case
     struct Buffer b;
     b.length = 3;
@@ -85,7 +88,7 @@ test_add_data (void) {
     char *old_buffer_end = state->buffer_end;
     assert (add_data (state, &b) == 0);
     assert (state->buffer_write - state->buffer_start == 3);
-    assert (state->current_location == 0);
+    assert (state->parser_read == state->buffer_start);
     assert (state->buffer_start == old_buffer_start);
     assert (state->buffer_end == old_buffer_end);
     b.length = 15;
