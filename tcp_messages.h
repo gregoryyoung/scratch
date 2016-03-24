@@ -1,77 +1,77 @@
 #ifndef ES_TCP_MESSAGES
 #define ES_TCP_MESSAGES
 
-    static const char Message_HeartbeatRequest = 0x01;
-    static const char Message_HeartbeatResponse = 0x02;
+#define MESSAGE_HEARTBEATREQUEST 0x01
+#define MESSAGE_HEARTBEATRESPONSE 0x02
 
-    static const char Message_Ping = 0x03;
-    static const char Message_Pong = 0x04;
+#define MESSAGE_PING 0x03
+#define MESSAGE_PONG 0x04
 
-    static const char Message_PrepareAck = 0x05;
-    static const char Message_CommitAck = 0x06;
+#define MESSAGE_PREPAREACK 0x05
+#define  MESSAGE_COMMITACK 0x06
 
-    static const char Message_SlaveAssignment = 0x07;
-    static const char Message_CloneAssignment = 0x08;
+#define  MESSAGE_SLAVEASSIGNMENT 0x07
+#define  MESSAGE_CLONEASSIGNMENT 0x08
 
-    static const char Message_SubscribeReplica = 0x10;
-    static const char Message_ReplicaLogPositionAck = 0x11;
-    static const char Message_CreateChunk = 0x12;
-    static const char Message_RawChunkBulk = 0x13;
-    static const char Message_DataChunkBulk = 0x14;
-    static const char Message_ReplicaSubscriptionRetry = 0x15;
-    static const char Message_ReplicaSubscribed = 0x16;
+#define  MESSAGE_SUBSCRIBEREPLICA 0x10
+#define  MESSAGE_REPLICALOGPOSITIONACK 0x11
+#define  MESSAGE_CREATECHUNK 0x12
+#define  MESSAGE_RAWCHUNKBULK 0x13
+#define  MESSAGE_DATACHUNKBULK 0x14
+#define  MESSAGE_REPLICASUBSCRIPTIONRETRY 0x15
+#define  MESSAGE_REPLICASUBSCRIBED 0x16
 
 
     //Client Messages
 
-    static const char Message_WriteEvents = 0x82;
-    static const char Message_WriteEventsCompleted = 0x83;
+#define  MESSAGE_WRITEEVENTS 0x82
+#define  MESSAGE_WRITEEVENTSCOMPLETED 0x83
 
-    static const char Message_TransactionStart = 0x84;
-    static const char Message_TransactionStartCompleted = 0x85;
-    static const char Message_TransactionWrite = 0x86;
-    static const char Message_TransactionWriteCompleted = 0x87;
-    static const char Message_TransactionCommit = 0x88;
-    static const char Message_TransactionCommitCompleted = 0x89;
+#define  MESSAGE_TRANSACTIONSTART 0x84
+#define  MESSAGE_TRANSACTIONSTARTCOMPLETED 0x85
+#define  MESSAGE_TRANSACTIONWRITE 0x86
+#define  MESSAGE_TRANSACTIONWRITECOMPLETED 0x87
+#define  MESSAGE_TRANSACTIONCOMMIT 0x88
+#define  MESSAGE_TRANSACTIONCOMMITCOMPLETED 0x89
 
-    static const char Message_DeleteStream = 0x8A;
-    static const char Message_DeleteStreamCompleted = 0x8B;
+#define  MESSAGE_DELETESTREAM 0x8A
+#define  MESSAGE_DELETESTREAMCOMPLETED 0x8B
 
-    static const char Message_ReadEvent = 0xB0;
-    static const char Message_ReadEventCompleted = 0xB1;
-    static const char Message_ReadStreamEventsForward = 0xB2;
-    static const char Message_ReadStreamEventsForwardCompleted = 0xB3;
-    static const char Message_ReadStreamEventsBackward = 0xB4;
-    static const char Message_ReadStreamEventsBackwardCompleted = 0xB5;
-    static const char Message_ReadAllEventsForward = 0xB6;
-    static const char Message_ReadAllEventsForwardCompleted = 0xB7;
-    static const char Message_ReadAllEventsBackward = 0xB8;
-    static const char Message_ReadAllEventsBackwardCompleted = 0xB9;
+#define  MESSAGE_READEVENT 0xB0
+#define  MESSAGE_READEVENTCOMPLETED 0xB1
+#define  MESSAGE_READSTREAMEVENTSFORWARD 0xB2
+#define  MESSAGE_READSTREAMEVENTSFORWARDCOMPLETED 0xB3
+#define  MESSAGE_READSTREAMEVENTSBACKWARD 0xB4
+#define  MESSAGE_READSTREAMEVENTSBACKWARDCOMPLETED 0xB5
+#define  MESSAGE_READALLEVENTSFORWARD 0xB6
+#define  MESSAGE_READALLEVENTSFORWARDCOMPLETED 0xB7
+#define  MESSAGE_READALLEVENTSBACKWARD 0xB8
+#define  MESSAGE_READALLEVENTSBACKWARDCOMPLETED 0xB9
 
-    static const char Message_SubscribeToStream = 0xC0;
-    static const char Message_SubscriptionConfirmation = 0xC1;
-    static const char Message_StreamEventAppeared = 0xC2;
-    static const char Message_UnsubscribeFromStream = 0xC3;
-    static const char Message_SubscriptionDropped = 0xC4;
-    static const char Message_ConnectToPersistentSubscription = 0xC5;
-    static const char Message_PersistentSubscriptionConfirmation = 0xC6;
-    static const char Message_PersistentSubscriptionStreamEventAppeared = 0xC7;
-    static const char Message_CreatePersistentSubscription = 0xC8;
-    static const char Message_CreatePersistentSubscriptionCompleted = 0xC9;
-    static const char Message_DeletePersistentSubscription = 0xCA;
-    static const char Message_DeletePersistentSubscriptionCompleted = 0xCB;
-    static const char Message_PersistentSubscriptionAckEvents = 0xCC;
-    static const char Message_PersistentSubscriptionNakEvents = 0xCD;
-    static const char Message_UpdatePersistentSubscription = 0xCE;
-    static const char Message_UpdatePersistentSubscriptionCompleted = 0xCF;
+#define  MESSAGE_SUBSCRIBETOSTREAM 0xC0
+#define  MESSAGE_SUBSCRIPTIONCONFIRMATION 0xC1
+#define  MESSAGE_STREAMEVENTAPPEARED 0xC2
+#define  MESSAGE_UNSUBSCRIBEFROMSTREAM 0xC3
+#define  MESSAGE_SUBSCRIPTIONDROPPED 0xC4
+#define  MESSAGE_CONNECTTOPERSISTENTSUBSCRIPTION 0xC5
+#define  MESSAGE_PERSISTENTSUBSCRIPTIONCONFIRMATION 0xC6
+#define  MESSAGE_PERSISTENTSUBSCRIPTIONSTREAMEVENTAPPEARED 0xC7
+#define  MESSAGE_CREATEPERSISTENTSUBSCRIPTION 0xC8
+#define  MESSAGE_CREATEPERSISTENTSUBSCRIPTIONCOMPLETED 0xC9
+#define  MESSAGE_DELETEPERSISTENTSUBSCRIPTION 0xCA
+#define  MESSAGE_DELETEPERSISTENTSUBSCRIPTIONCOMPLETED 0xCB
+#define  MESSAGE_PERSISTENTSUBSCRIPTIONACKEVENTS 0xCC
+#define  MESSAGE_PERSISTENTSUBSCRIPTIONNAKEVENTS 0xCD
+#define  MESSAGE_UPDATEPERSISTENTSUBSCRIPTION 0xCE
+#define  MESSAGE_UPDATEPERSISTENTSUBSCRIPTIONCOMPLETED 0xCF
 
-    static const char Message_ScavengeDatabase = 0xD0;
-    static const char Message_ScavengeDatabaseCompleted = 0xD1;
+#define  MESSAGE_SCAVENGEDATABASE 0xD0
+#define  MESSAGE_SCAVENGEDATABASECOMPLETED 0xD1
 
-    static const char Respose_BadRequest = 0xF0;
-    static const char Response_NotHandled = 0xF1;
-    static const char Response_Authenticate = 0xF2;
-    static const char Response_Authenticated = 0xF3;
-    static const char Response_NotAuthenticated = 0xF4;
+#define  MESSAGE_BADREQUEST 0xF0
+#define  MESSAGE_NOTHANDLED 0xF1
+#define  MESSAGE_AUTHENTICATE 0xF2
+#define  MESSAGE_AUTHENTICATED 0xF3
+#define  MESSAGE_NOTAUTHENTICATED 0xF4
 
-    #endif
+#endif
