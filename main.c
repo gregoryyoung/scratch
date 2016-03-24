@@ -12,7 +12,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
-
+#include "tcp_messages.h"
 
 struct ParserState {
     char *parser_read;
