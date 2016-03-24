@@ -2,7 +2,7 @@
 #include "tcp_messages.h"
 
 static char *
-GET_STRING_FOR_TCP_MESSAGE(uint8_t message) {
+get_string_for_tcp_message(uint8_t message) {
 	switch(message)
 	{
 		case MESSAGE_HEARTBEATREQUEST : return "Heartbeat Request";
