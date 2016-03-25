@@ -35,10 +35,10 @@ struct Buffer {
 };
 
 struct Header *
-create_header (const char command, const uuid_t *correlation_id, const char *username, const char *password) {
+create_header (const char command, const uuid_t correlation_id, const char *username, const char *password) {
     struct Header *ret = malloc (sizeof (struct Header));
     ret->command = command;
-    uuid_copy(*(ret->correlation_id), *correlation_id);
+    uuid_copy(*(ret->correlation_id), correlation_id);
     ret->username = strdup(username);
     ret->password = strdup(password);
     return ret;
@@ -91,15 +91,34 @@ add_data(struct ParserState *state, struct Buffer *data) {
     return 0;
 }
 #define COMMANDOFFSET 0
-#define FLAGSOFFSET CommandOffset + 1
-#define CORRELATIONOFFSET = FlagsOffset + 1
-#define AUTHOFFSET = CorrelationOffset + 16
-#define MANDATORYSIZE = AuthOffset
+#define FLAGSOFFSET COMMANDOFFSET + 1
+#define CORRELATIONOFFSET FLAGSOFFSET + 1
+#define AUTHOFFSET CORRELATIONOFFSET + 16
+#define MANDATORYSIZE AUTHOFFSET
+
+static int net_order[16] = {3, 2, 1, 0, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15};
+
+uuid_t *
+get_uuid_from_wtf (char *wtf_data) {
+    uuid_t *ret = malloc (sizeof (uuid_t));
+    for(int i=0;i<16;i++) {
+        *ret[i] = wtf_data[net_order[i]];
+    }
+    return ret;
+}
 
 int
-read_header(struct Buffer *buffer, struct Header **header) {
+read_header (struct Buffer *buffer, struct Header **header) {
     //buffer has length prefix removed
-
+    if (buffer->length < MANDATORYSIZE) return 0;
+    char command = buffer->location[COMMANDOFFSET];
+    char flags = buffer->location[FLAGSOFFSET];
+    uuid_t *correlation_id = get_uuid_from_wtf(buffer->location + CORRELATIONOFFSET);
+    char *username = NULL;
+    char *password = NULL;
+    struct Header *local = create_header(command, *correlation_id, username, password);
+    free (correlation_id);
+    *header = local;
 }
 
 struct Buffer *
