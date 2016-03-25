@@ -66,9 +66,11 @@ read_next (struct ParserState *state) {
     assert (state);
     int32_t length = 0;
     if(state->buffer_write - state->parser_read < 4) return NULL;
-    memcpy (&length, state->parser_read, sizeof(length));
-    //read length prefix
+    char *i = state->parser_read;
+    length = (i[0] << 24) | (i[1] << 16) | (i[2] << 8) | i[3];
+#ifdef TODO_NEEDS_TO_CHECK_ARCH
     length = ntohl(length);
+#endif
     if(state->buffer_write - state->parser_read < length + 4) return NULL;
     struct Buffer *ret = malloc(sizeof(struct Buffer));
     ret->length = length;
