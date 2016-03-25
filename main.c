@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <uuid/uuid.h>
 #include "tcp_messages.h"
 
 struct ParserState {
@@ -21,10 +22,39 @@ struct ParserState {
     char *buffer_write;
 };
 
+struct Header {
+    char command;
+    uuid_t *correlation_id;
+    char *username;
+    char *password;
+};
+
 struct Buffer {
     int length;
     char *location;
 };
+
+struct Header *
+create_header (const char command, const uuid_t *correlation_id, const char *username, const char *password) {
+    struct Header *ret = malloc (sizeof (struct Header));
+    ret->command = command;
+    uuid_copy(*(ret->correlation_id), *correlation_id);
+    ret->username = strdup(username);
+    ret->password = strdup(password);
+    return ret;
+}
+
+void
+destroy_header (struct Header **header) {
+    assert (header);
+    if(*header) {
+        struct Header *self = *header;
+        if(self->username) free(self->username);
+        if(self->password) free(self->password);
+        free(self);
+        *header = NULL;
+    }
+}
 
 struct ParserState *
 create_parser_state (int buffer_size) {
@@ -59,6 +89,17 @@ add_data(struct ParserState *state, struct Buffer *data) {
     }
     state->buffer_write += data->length;
     return 0;
+}
+#define COMMANDOFFSET 0
+#define FLAGSOFFSET CommandOffset + 1
+#define CORRELATIONOFFSET = FlagsOffset + 1
+#define AUTHOFFSET = CorrelationOffset + 16
+#define MANDATORYSIZE = AuthOffset
+
+int
+read_header(struct Buffer *buffer, struct Header **header) {
+    //buffer has length prefix removed
+
 }
 
 struct Buffer *
