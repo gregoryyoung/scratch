@@ -74,4 +74,8 @@
 #define  MESSAGE_AUTHENTICATED 0xF3
 #define  MESSAGE_NOTAUTHENTICATED 0xF4
 
+char *
+get_string_for_tcp_message(uint8_t message);
+
+
 #endif

@@ -24,6 +24,7 @@ struct ParserState {
 
 struct Header {
     char command;
+    char flags;
     uuid_t *correlation_id;
     char *username;
     char *password;
@@ -35,12 +36,16 @@ struct Buffer {
 };
 
 struct Header *
-create_header (const char command, const uuid_t correlation_id, const char *username, const char *password) {
+create_header (const char command, const char flags, const uuid_t correlation_id, const char *username, const char *password) {
     struct Header *ret = malloc (sizeof (struct Header));
+    ret->correlation_id = malloc (sizeof (uuid_t));
     ret->command = command;
+    ret->flags = flags;
     uuid_copy(*(ret->correlation_id), correlation_id);
-    ret->username = strdup(username);
-    ret->password = strdup(password);
+    ret->username = NULL;
+    ret->password = NULL;
+    if(username != NULL) ret->username = strdup(username);
+    if(password != NULL) ret->password = strdup(password);
     return ret;
 }
 
@@ -124,9 +129,21 @@ read_header (struct Buffer *buffer, struct Header **header) {
     uuid_t *correlation_id = get_uuid_from_wtf(buffer->location + CORRELATIONOFFSET);
     char *username = NULL;
     char *password = NULL;
-    struct Header *local = create_header(command, *correlation_id, username, password);
+    struct Header *local = create_header(command, flags, *correlation_id, username, password);
     free (correlation_id);
     *header = local;
+
+    return 1;
+}
+
+char *
+get_string_for_header(struct Header *header) {
+    char *ret = malloc(1024);
+    char uuid_str[37];
+    char *cmd_str = get_string_for_tcp_message(header->command);
+    uuid_unparse(*header->correlation_id, uuid_str);
+    sprintf (ret, "Command: %s, flags %d, correlation_id: %s\n", cmd_str, header->flags, uuid_str);
+    return ret;
 }
 
 struct Buffer *
@@ -135,10 +152,9 @@ read_next (struct ParserState *state) {
     int32_t length = 0;
     if(state->buffer_write - state->parser_read < 4) return NULL;
     char *i = state->parser_read;
+    //TODO in one operation?
     length = (i[0] << 24) | (i[1] << 16) | (i[2] << 8) | i[3];
-#ifdef TODO_NEEDS_TO_CHECK_ARCH
     length = ntohl(length);
-#endif
     if(state->buffer_write - state->parser_read < length + 4) return NULL;
     struct Buffer *ret = malloc(sizeof(struct Buffer));
     ret->length = length;
@@ -211,7 +227,7 @@ test_add_data (void) {
 static void
 test_read (void) {
     struct ParserState *state = create_parser_state(4096);
-    char data[24] = {0,0,0,0x0A,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
+    char data[24] = {0x0A,0,0,0,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
     struct Buffer b;
     //too short
     b.length = 6;
@@ -253,6 +269,7 @@ main(int argc, char *argv[])
     int sockfd = 0, n = 0;
     char recvBuff[1024];
     struct sockaddr_in serv_addr;
+    struct ParserState *state = create_parser_state(4096);
 
     test_add_data();
     test_read();
@@ -293,6 +310,21 @@ main(int argc, char *argv[])
             char buf[1024];
             int32_t i = read(sockfd, buf, 1024);
             printf("read %d bytes\n", i);
+            struct Buffer data;
+            data.location = buf;
+            data.length = i;
+            add_data (state, &data);
+            struct Buffer *msg = read_next (state);
+            while(msg != NULL) {
+                printf("read message bytes = %d\n", msg->length);
+                struct Header *header;
+                if(read_header (msg, &header)) {
+                    char *info = get_string_for_header(header);
+                    printf("header is %s\n", info);
+                    free(info);
+                }
+                msg = read_next (state);
+            }
 
             if (!i) {
                 printf("socket dropped");
