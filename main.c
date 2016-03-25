@@ -136,6 +136,14 @@ read_header (struct Buffer *buffer, struct Header **header) {
     return 1;
 }
 
+int32_t
+write_header (struct Header *header, char *buffer) {
+    buffer[COMMANDOFFSET] = header->command;
+    buffer[FLAGSOFFSET] = header->flags;
+    write_uuid_to_wtf (*(header->correlation_id), buffer + CORRELATIONOFFSET);
+    return AUTHOFFSET;
+}
+
 char *
 get_string_for_header(struct Header *header) {
     char *ret = malloc(1024);
@@ -267,7 +275,8 @@ int
 main(int argc, char *argv[])
 {
     int sockfd = 0, n = 0;
-    char recvBuff[1024];
+    char recv_buf[1024];
+    char send_buf[1024];
     struct sockaddr_in serv_addr;
     struct ParserState *state = create_parser_state(4096);
 
@@ -281,7 +290,6 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    memset(recvBuff, '0',sizeof(recvBuff));
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         perror("\n Error : Could not create socket \n");
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -322,6 +330,15 @@ main(int argc, char *argv[])
                     char *info = get_string_for_header(header);
                     printf("header is %s\n", info);
                     free(info);
+                    if(header->command == MESSAGE_HEARTBEATREQUEST) {
+                        struct Header * resp = create_header (MESSAGE_HEARTBEATRESPONSE, 0, *header->correlation_id, NULL, NULL);
+                        char *r = get_string_for_header (resp);
+                        printf ("response is %s\n", r);
+                        int32_t len = write_header (resp, send_buf + 4);
+                        int *resplen = (int*) send_buf;
+                        *resplen = len;
+                        send (sockfd, send_buf, len + 4, 0);
+                    }
                 }
                 msg = read_next (state);
             }

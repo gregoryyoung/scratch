@@ -22,7 +22,7 @@
 #define  MESSAGE_REPLICASUBSCRIBED 0x16
 
 
-    //Client Messages
+//Client Messages
 
 #define  MESSAGE_WRITEEVENTS 0x82
 #define  MESSAGE_WRITEEVENTSCOMPLETED 0x83
