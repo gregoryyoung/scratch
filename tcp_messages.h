@@ -22,7 +22,7 @@
 #define  MESSAGE_REPLICASUBSCRIBED 0x16
 
 
-    //Client Messages
+//Client Messages
 
 #define  MESSAGE_WRITEEVENTS 0x82
 #define  MESSAGE_WRITEEVENTSCOMPLETED 0x83
@@ -73,5 +73,9 @@
 #define  MESSAGE_AUTHENTICATE 0xF2
 #define  MESSAGE_AUTHENTICATED 0xF3
 #define  MESSAGE_NOTAUTHENTICATED 0xF4
+
+char *
+get_string_for_tcp_message(uint8_t message);
+
 
 #endif

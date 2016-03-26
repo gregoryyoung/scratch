@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <uuid/uuid.h>
 #include "tcp_messages.h"
 
 struct ParserState {
@@ -21,10 +22,44 @@ struct ParserState {
     char *buffer_write;
 };
 
+struct Header {
+    char command;
+    char flags;
+    uuid_t *correlation_id;
+    char *username;
+    char *password;
+};
+
 struct Buffer {
     int length;
     char *location;
 };
+
+struct Header *
+create_header (const char command, const char flags, const uuid_t correlation_id, const char *username, const char *password) {
+    struct Header *ret = malloc (sizeof (struct Header));
+    ret->correlation_id = malloc (sizeof (uuid_t));
+    ret->command = command;
+    ret->flags = flags;
+    uuid_copy(*(ret->correlation_id), correlation_id);
+    ret->username = NULL;
+    ret->password = NULL;
+    if(username != NULL) ret->username = strdup(username);
+    if(password != NULL) ret->password = strdup(password);
+    return ret;
+}
+
+void
+destroy_header (struct Header **header) {
+    assert (header);
+    if(*header) {
+        struct Header *self = *header;
+        if(self->username) free(self->username);
+        if(self->password) free(self->password);
+        free(self);
+        *header = NULL;
+    }
+}
 
 struct ParserState *
 create_parser_state (int buffer_size) {
@@ -60,14 +95,73 @@ add_data(struct ParserState *state, struct Buffer *data) {
     state->buffer_write += data->length;
     return 0;
 }
+#define COMMANDOFFSET 0
+#define FLAGSOFFSET COMMANDOFFSET + 1
+#define CORRELATIONOFFSET FLAGSOFFSET + 1
+#define AUTHOFFSET CORRELATIONOFFSET + 16
+#define MANDATORYSIZE AUTHOFFSET
+
+static int net_order[16] = {3, 2, 1, 0, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15};
+
+uuid_t *
+get_uuid_from_wtf (char *wtf_data) {
+    char *ret = malloc (sizeof (uuid_t));
+    for(int i=0;i<16;i++) {
+        ret[i] = wtf_data[net_order[i]];
+    }
+    return (uuid_t *)ret;
+}
+
+void
+write_uuid_to_wtf (uuid_t uuid, char *wtf_data) {
+    for(int i=0;i<16;i++) {
+        wtf_data[net_order[i]] = uuid[i];
+    }
+}
+
+
+int
+read_header (struct Buffer *buffer, struct Header **header) {
+    //buffer has length prefix removed
+    if (buffer->length < MANDATORYSIZE) return 0;
+    char command = buffer->location[COMMANDOFFSET];
+    char flags = buffer->location[FLAGSOFFSET];
+    uuid_t *correlation_id = get_uuid_from_wtf(buffer->location + CORRELATIONOFFSET);
+    char *username = NULL;
+    char *password = NULL;
+    struct Header *local = create_header(command, flags, *correlation_id, username, password);
+    free (correlation_id);
+    *header = local;
+
+    return 1;
+}
+
+int32_t
+write_header (struct Header *header, char *buffer) {
+    buffer[COMMANDOFFSET] = header->command;
+    buffer[FLAGSOFFSET] = header->flags;
+    write_uuid_to_wtf (*(header->correlation_id), buffer + CORRELATIONOFFSET);
+    return AUTHOFFSET;
+}
+
+char *
+get_string_for_header(struct Header *header) {
+    char *ret = malloc(1024);
+    char uuid_str[37];
+    char *cmd_str = get_string_for_tcp_message(header->command);
+    uuid_unparse(*header->correlation_id, uuid_str);
+    sprintf (ret, "Command: %s, flags %d, correlation_id: %s\n", cmd_str, header->flags, uuid_str);
+    return ret;
+}
 
 struct Buffer *
 read_next (struct ParserState *state) {
     assert (state);
     int32_t length = 0;
     if(state->buffer_write - state->parser_read < 4) return NULL;
-    memcpy (&length, state->parser_read, sizeof(length));
-    //read length prefix
+    char *i = state->parser_read;
+    //TODO in one operation?
+    length = (i[0] << 24) | (i[1] << 16) | (i[2] << 8) | i[3];
     length = ntohl(length);
     if(state->buffer_write - state->parser_read < length + 4) return NULL;
     struct Buffer *ret = malloc(sizeof(struct Buffer));
@@ -76,6 +170,41 @@ read_next (struct ParserState *state) {
     state->parser_read = state->parser_read + length + 4;
     return ret;
 }
+
+static void
+test_read_wtf_uuid() {
+    char uuid_str[37];
+    char data[16] = {0x46, 0x6c,0xbc, 0x3e, 0x72,0xe2, 0x26, 0x42, 0xbc,0xb5,0xaa,0x93,0xc4,0x11,0xed,0x0d };
+    char *expected = "3ebc6c46-e272-4226-bcb5-aa93c411ed0d";
+    uuid_t * uuid = get_uuid_from_wtf (data);
+    uuid_unparse(*uuid, uuid_str);
+    free (uuid);
+    char data1[16] = {0xf8, 0xa6, 0xbb, 0x92, 0xe4, 0x07, 0x4d, 0x4a, 0xb1, 0xdf, 0x19, 0x04, 0xa9, 0x3c, 0x65, 0xa9};
+    expected = "92bba6f8-07e4-4a4d-b1df-1904a93c65a9";
+    uuid = get_uuid_from_wtf (data1);
+    uuid_unparse(*uuid, uuid_str);
+    assert(strcmp(uuid_str, expected) == 0);
+}
+
+static void
+test_write_wtf_uuid() {
+    uuid_t uuid;
+    char temp[37];
+    char output[16];
+    uuid_parse("3ebc6c46-e272-4226-bcb5-aa93c411ed0d", uuid);
+    uuid_unparse(uuid, temp);
+    printf("%s\n", temp);
+
+    char expected[16] = {0x46, 0x6c,0xbc, 0x3e, 0x72,0xe2, 0x26, 0x42, 0xbc,0xb5,0xaa,0x93,0xc4,0x11,0xed,0x0d };
+    write_uuid_to_wtf (uuid, output);
+
+    uuid_unparse(output, temp);
+    for(int i=0;i<16;i++) {
+        assert(output[i] == expected[i]);
+    }
+}
+
+
 
 static void
 test_add_data (void) {
@@ -106,7 +235,7 @@ test_add_data (void) {
 static void
 test_read (void) {
     struct ParserState *state = create_parser_state(4096);
-    char data[24] = {0,0,0,0x0A,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
+    char data[24] = {0x0A,0,0,0,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
     struct Buffer b;
     //too short
     b.length = 6;
@@ -146,19 +275,21 @@ int
 main(int argc, char *argv[])
 {
     int sockfd = 0, n = 0;
-    char recvBuff[1024];
+    char recv_buf[1024];
+    char send_buf[1024];
     struct sockaddr_in serv_addr;
+    struct ParserState *state = create_parser_state(4096);
 
     test_add_data();
     test_read();
-
+    test_read_wtf_uuid();
+    test_write_wtf_uuid();
     if(argc != 2)
     {
         printf("\n Usage: %s <ip of server> \n",argv[0]);
         return 1;
     }
 
-    memset(recvBuff, '0',sizeof(recvBuff));
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         perror("\n Error : Could not create socket \n");
     memset(&serv_addr, '0', sizeof(serv_addr));
@@ -187,6 +318,30 @@ main(int argc, char *argv[])
             char buf[1024];
             int32_t i = read(sockfd, buf, 1024);
             printf("read %d bytes\n", i);
+            struct Buffer data;
+            data.location = buf;
+            data.length = i;
+            add_data (state, &data);
+            struct Buffer *msg = read_next (state);
+            while(msg != NULL) {
+                printf("read message bytes = %d\n", msg->length);
+                struct Header *header;
+                if(read_header (msg, &header)) {
+                    char *info = get_string_for_header(header);
+                    printf("header is %s\n", info);
+                    free(info);
+                    if(header->command == MESSAGE_HEARTBEATREQUEST) {
+                        struct Header * resp = create_header (MESSAGE_HEARTBEATRESPONSE, 0, *header->correlation_id, NULL, NULL);
+                        char *r = get_string_for_header (resp);
+                        printf ("response is %s\n", r);
+                        int32_t len = write_header (resp, send_buf + 4);
+                        int *resplen = (int*) send_buf;
+                        *resplen = len;
+                        send (sockfd, send_buf, len + 4, 0);
+                    }
+                }
+                msg = read_next (state);
+            }
 
             if (!i) {
                 printf("socket dropped");
