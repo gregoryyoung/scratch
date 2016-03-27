@@ -177,9 +177,8 @@ compress_space(struct ParserState *state) {
     assert (state);
     if (state->parser_read == state->buffer_start) return;
     int length = state->buffer_write - state->parser_read;
-    if (state->parser_read > state->buffer_write) {
-        memcpy (state->buffer_start, state->parser_read, length);
-    }
+    if (state->buffer_write > state->parser_read) 
+        memcpy(state->buffer_start, state->parser_read, length);
     state->buffer_write = state->buffer_start + length;
     state->parser_read = state->buffer_start;
     return;
@@ -208,7 +207,6 @@ test_write_wtf_uuid() {
     char output[16];
     uuid_parse("3ebc6c46-e272-4226-bcb5-aa93c411ed0d", uuid);
     uuid_unparse(uuid, temp);
-    printf("%s\n", temp);
 
     char expected[16] = {0x46, 0x6c,0xbc, 0x3e, 0x72,0xe2, 0x26, 0x42, 0xbc,0xb5,0xaa,0x93,0xc4,0x11,0xed,0x0d };
     write_uuid_to_wtf (uuid, output);
@@ -252,20 +250,29 @@ test_compress (void) {
     struct ParserState *state = create_parser_state(4096);
     char data[24] = {0x0A,0,0,0,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
     struct Buffer b;
+    char *original_start = state->buffer_start;
     b.length = 14;
     b.location = (char *) &data;
     //whole message
     add_data (state, &b);
+    compress_space (state);
     assert (state->parser_read == state->buffer_start);
     assert (state->buffer_write - state->buffer_start == 14);
     b.length = 6;
+    b.location[0] = 0x0B;
     add_data (state, &b);
     struct Buffer * read = read_next (state);
     assert (read);
     assert (state->buffer_write - state->buffer_start == 20);
+    assert (state->parser_read == state->buffer_start + 14);
     compress_space (state);
     assert (state->parser_read == state->buffer_start);
     assert (state->buffer_write - state->buffer_start == 6);
+    assert (original_start == state->buffer_start);
+    assert (state->buffer_start[0] == 0x0B);
+    assert (state->buffer_start[1] == 0);
+    assert (state->buffer_start[2] == 0);
+    assert (state->buffer_start[3] == 0);
     destroy_parser_state (&state);    
 }
 
