@@ -368,6 +368,10 @@ main(int argc, char *argv[])
             data.length = i;
             add_data (state, &data);
             struct Buffer *msg = read_next (state);
+            if (!i) {
+                printf("socket dropped");
+                return 0;
+             }
             while(msg != NULL) {
                 printf("read message bytes = %d\n", msg->length);
                 struct Header *header;
@@ -387,11 +391,8 @@ main(int argc, char *argv[])
                 }
                 msg = read_next (state);
             }
+            compress_space (state);
 
-            if (!i) {
-                printf("socket dropped");
-                return 0;
-             }
         } else {
             printf("mpt POLLIN");
         }
