@@ -82,19 +82,6 @@ destroy_parser_state (struct ParserState **state) {
     }
 }
 
-int32_t
-add_data(struct ParserState *state, struct Buffer *data) {
-    assert(state);
-    assert(data);
-    if(data->length > 0) {
-        if(state->buffer_write + data->length > state->buffer_end) {
-            return -1;
-        }
-        memcpy(state->buffer_write, data->location, data->length);
-    }
-    state->buffer_write += data->length;
-    return 0;
-}
 #define COMMANDOFFSET 0
 #define FLAGSOFFSET COMMANDOFFSET + 1
 #define CORRELATIONOFFSET FLAGSOFFSET + 1
@@ -171,6 +158,34 @@ read_next (struct ParserState *state) {
     return ret;
 }
 
+int32_t
+add_data(struct ParserState *state, struct Buffer *data) {
+    assert (state);
+    assert (data);
+    if (data->length > 0) {
+        if (state->buffer_write + data->length > state->buffer_end) {
+            return -1;
+        }
+        memcpy(state->buffer_write, data->location, data->length);
+    }
+    state->buffer_write += data->length;
+    return 0;
+}
+
+void
+compress_space(struct ParserState *state) {
+    assert (state);
+    if (state->parser_read == state->buffer_start) return;
+    int length = state->buffer_write - state->parser_read;
+    if (state->parser_read > state->buffer_write) {
+        memcpy (state->buffer_start, state->parser_read, length);
+    }
+    state->buffer_write = state->buffer_start + length;
+    state->parser_read = state->buffer_start;
+    return;
+
+}
+
 static void
 test_read_wtf_uuid() {
     char uuid_str[37];
@@ -232,6 +247,28 @@ test_add_data (void) {
     destroy_parser_state (&state);
 }
 
+static void 
+test_compress (void) {
+    struct ParserState *state = create_parser_state(4096);
+    char data[24] = {0x0A,0,0,0,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9};
+    struct Buffer b;
+    b.length = 14;
+    b.location = (char *) &data;
+    //whole message
+    add_data (state, &b);
+    assert (state->parser_read == state->buffer_start);
+    assert (state->buffer_write - state->buffer_start == 14);
+    b.length = 6;
+    add_data (state, &b);
+    struct Buffer * read = read_next (state);
+    assert (read);
+    assert (state->buffer_write - state->buffer_start == 20);
+    compress_space (state);
+    assert (state->parser_read == state->buffer_start);
+    assert (state->buffer_write - state->buffer_start == 6);
+    destroy_parser_state (&state);    
+}
+
 static void
 test_read (void) {
     struct ParserState *state = create_parser_state(4096);
@@ -282,6 +319,7 @@ main(int argc, char *argv[])
 
     test_add_data();
     test_read();
+    test_compress();
     test_read_wtf_uuid();
     test_write_wtf_uuid();
     if(argc != 2)

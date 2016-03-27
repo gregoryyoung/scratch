@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include "tcp_messages.h"
 
-static char *
+char *
 get_string_for_tcp_message(uint8_t message) {
 	switch(message)
 	{
